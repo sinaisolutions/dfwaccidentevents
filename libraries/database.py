@@ -32,12 +32,12 @@ def write_postgre_db(data_url=gp.data_url,tablename=gp.newdataTableID,dbname=gp.
     
     unique_id=['id','event_number','zip']  #primary key
     #st.write('data from write_to_db method', data)
-
-    if((connexion is not None) and download_flag and ( not data.empty )): #asserting if download was succesful.
+    connexion=engine.connect()
+    if((connexion is not None download_flag and ( not data.empty )): #asserting if download was succesful.
         #cur=connexion.cursor()
          
         try:
-            connexion.cursor().execute(F'TRUNCATE TABLE  {tablename}') 
+            connexion.execute(F'TRUNCATE TABLE  {tablename}') 
             connexion.commit()
             print("\n")
             print("@"*50)
@@ -92,14 +92,16 @@ def archive_to_postgresdb(table_name=gp.newdataTableID,archived_to_table=gp.arch
         engine=create_engine(f'postgresql+psycopg2://{uname}:{upwd}@{hostname}:{port}/{dbname}',executemany_mode='values_plus_batch')
     else:
         engine=create_engine(f'postgresql+psycopg2://{uname}:{upwd}@{hostname}/{dbname}',executemany_mode='values_plus_batch')
-    records=pd.read_sql(query0,con=engine)
-    if( not records.empty ):
+
+        connexion=engine.connect()
 
         if(connexion):
             try:
-                connexion.cursor().execute(upsert_query) # will ignore records where there is duplicate keys::INSERT OR REPLACE ??
-                connexion.commit()
-                connexion.close() # Closing the connexion after writingto DB
+                records=pd.read_sql(query0,con=engine)
+                if( not records.empty ):
+                    connexion.execute(upsert_query) # will ignore records where there is duplicate keys::INSERT OR REPLACE ??
+                    connexion.commit()
+                    connexion.close() # Closing the connexion after writingto DB
                 print(F"\nInsert/Update {len(records)}  record(s) in archieved table at: ", datetime.datetime.now().strftime("%m/%d/%Y-%H:%M:%S"))
                 print("$#$"*50)
             except Exception as error:
