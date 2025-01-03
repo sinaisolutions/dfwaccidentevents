@@ -5,5 +5,4 @@ scheduler==0.8.5
 pydeck>=0.8
 numpy==1.26.2
 plotly==5.18.0
-sqlite3
 psycopg2 
