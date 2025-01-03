@@ -16,12 +16,13 @@ def write_postgre_db(data_url=gp.data_url,tablename=gp.newdataTableID,dbname=gp.
     get JSON data and save itto 'latestdata' table in DB
     """
     from sqlalchemy import create_engine
+    """
     connexion = psql.connect(
         dbname=dbname,
         user=uname,
         password=upwd,
         host=hostname, connect_timeout=timeout)
-    
+    """
     data,download_flag=p.download_json(data_url)
    
     if(port):
@@ -70,11 +71,13 @@ def postgres_upsert_onconflict(table, conn, keys, data_iter):
 @st.fragment(run_every=gp.run_every+30)
 def archive_to_postgresdb(table_name=gp.newdataTableID,archived_to_table=gp.archivedTableId,dbname=gp.dbId,uname=gp.uname,upwd=gp.pwd,hostname=gp.hostid,port=None,if_exist='append',timeout=10):
     from sqlalchemy import create_engine
+    """
     connexion = psql.connect(
         dbname=dbname,
         user=uname,
         password=upwd,
         host=hostname, connect_timeout=timeout)
+    """
     query0=F"SELECT * FROM {table_name}"
 
     upsert_query= F""" INSERT INTO {archived_to_table}  SELECT * from {table_name}
