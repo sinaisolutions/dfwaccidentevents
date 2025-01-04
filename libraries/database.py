@@ -5,6 +5,7 @@ import numpy as np,pandas as pd
 import datetime
 from . import globalParameters as gp
 from . import processing as p 
+from sqlalchemy import text
 
 if ('data' not in st.session_state):
     st.session_state.data=pd.DataFrame()#columns=['id', 'event_number', 'type', 'subtype', 'severity', 'address', 'state', 'zip', 'creationtime', 'description', 'updatetime', 'latitude', 'longitude'])
@@ -33,11 +34,9 @@ def write_postgre_db(data_url=gp.data_url,tablename=gp.newdataTableID,dbname=gp.
     unique_id=['id','event_number','zip']  #primary key
     #st.write('data from write_to_db method', data)
     connexion=engine.connect()
-    if((connexion is not None download_flag and ( not data.empty )): #asserting if download was succesful.
-        #cur=connexion.cursor()
-         
+    if((connexion is not None) and download_flag and ( not data.empty )): #asserting if download was succesful.
         try:
-            connexion.execute(F'TRUNCATE TABLE  {tablename}') 
+            connexion.execute(text(F'TRUNCATE TABLE  {tablename}') )
             connexion.commit()
             print("\n")
             print("@"*50)
@@ -93,27 +92,27 @@ def archive_to_postgresdb(table_name=gp.newdataTableID,archived_to_table=gp.arch
     else:
         engine=create_engine(f'postgresql+psycopg2://{uname}:{upwd}@{hostname}/{dbname}',executemany_mode='values_plus_batch')
 
-        connexion=engine.connect()
+    connexion=engine.connect()
 
-        if(connexion):
-            try:
-                records=pd.read_sql(query0,con=engine)
-                if( not records.empty ):
-                    connexion.execute(upsert_query) # will ignore records where there is duplicate keys::INSERT OR REPLACE ??
-                    connexion.commit()
-                    connexion.close() # Closing the connexion after writingto DB
-                print(F"\nInsert/Update {len(records)}  record(s) in archieved table at: ", datetime.datetime.now().strftime("%m/%d/%Y-%H:%M:%S"))
-                print("$#$"*50)
-            except Exception as error:
-                connexion.rollback()
-                connexion.close()
-                print("Error while archiving to DB. No records were inserted\n")
-                print(error)
-                print("$#$"*50)
+    if(connexion):
+        try:
+            records=pd.read_sql(query0,con=engine)
+            if( not records.empty ):
+                connexion.execute(text(upsert_query)) # will ignore records where there is duplicate keys::INSERT OR REPLACE ??
+                connexion.commit()
+                connexion.close() # Closing the connexion after writingto DB
+            print(F"\nInsert/Update {len(records)}  record(s) in archieved table at: ", datetime.datetime.now().strftime("%m/%d/%Y-%H:%M:%S"))
+            print("$#$"*50)
+        except Exception as error:
+            connexion.rollback()
+            connexion.close()
+            print("Error while archiving to DB. No records were inserted\n")
+            print(error)
+            print("$#$"*50)
     else:
         print(F"\nNO record exists in {table_name}")
         print("$#$"*50)
-
+    
     return None
 
 @st.fragment(run_every=gp.run_every+6)   #read from DB into the app every run_every
@@ -124,16 +123,19 @@ def getdata_fromdb(tablename=gp.newdataTableID,dbname=gp.dbId,uname=gp.uname,upw
     """
     from sqlalchemy import create_engine
     data_new=pd.DataFrame(columns=['id', 'event_number', 'type', 'subtype', 'severity', 'address', 'state', 'zip', 'creationtime', 'description', 'updatetime', 'latitude', 'longitude'])
+    """
     connexion = psql.connect(
         dbname=dbname,
         user=uname,
         password=upwd,
         host=hostname, connect_timeout=timeout)
+    """
     if(port):
         engine=create_engine(f'postgresql://{uname}:{upwd}@{hostname}:{port}/{dbname}',executemany_mode='values_plus_batch')
     else:
         engine=create_engine(f'postgresql://{uname}:{upwd}@{hostname}/{dbname}',executemany_mode='values_plus_batch')
-   
+
+    connexion=engine.connect()
     if(connexion is not None): #asserting if connexion is defined
         try: 
             df_list=[]  
@@ -148,8 +150,6 @@ def getdata_fromdb(tablename=gp.newdataTableID,dbname=gp.dbId,uname=gp.uname,upw
                 #print(st.session_state.data)
                 print("-"*50)
             
-                
-
         except Exception as error:
             print(error)
     else:
@@ -157,14 +157,4 @@ def getdata_fromdb(tablename=gp.newdataTableID,dbname=gp.dbId,uname=gp.uname,upw
 
         #return data_new   #will be empty data frame if Exception is trown out
 
-"""
-from sqlalchemy import URL
 
-url_object = URL.create(
-    "postgresql+pg8000",
-    username="dbuser",
-    password="kx@jj5/g",  # plain (unescaped) text
-    host="pghost10",
-    database="appdb",
-)
-"""
